@@ -15,12 +15,14 @@ class DataIngest:
         self.job_queue = list()
         self.running_jobs = list()
         self.job_description = dict()
-        
-
 
     @property
     def allow_additional_run(self):
-        return False if len(self.running_jobs) >= 2 else True
+        return False if self.num_running_jobs >= 2 else True
+
+    @property
+    def num_running_jobs(self):
+        return len(self.running_jobs)
 
     def get_data_by_range(self,
                           table: str,
@@ -67,7 +69,7 @@ class DataIngest:
         """
         Get the payload from the job_queue and send the request to the API endpoint
         """
-        while len(self.job_queue) > 0 or len(self.running_jobs) > 0:
+        while len(self.job_queue) > 0 or self.num_running_jobs > 0:
             if self.allow_additional_run and len(self.job_queue) > 0:
                 payload = self.job_queue.pop(0)
                 response = requests.post('https://en44bq5e33.execute-api.us-east-1.amazonaws.com/dev/fetch_data',
@@ -83,7 +85,7 @@ class DataIngest:
 
                     print(f"{self.job_description[job_id]} FAILED TO START")
 
-            if len(self.running_jobs) > 0:
+            if self.num_running_jobs > 0:
                 self.monitor_jobs()
 
     def monitor_jobs(self):
@@ -97,7 +99,6 @@ class DataIngest:
 
             print(f"{job_id}: {job_status}")
             if job_status == 'COMPLETE':
-
                 print(f"{self.job_description[job_id]} COMPLETED")
                 self.running_jobs.remove(job_id)
             time.sleep(5)

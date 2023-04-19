@@ -14,7 +14,7 @@ def update_bronze_layer():
     api_key = dbutils.secrets.get(scope='mootech-scope', key='mootech-key')
 
     # update transactions tables
-    data_ingest = DataIngest(api_key = api_key)
+    data_ingest = DataIngest(api_key=api_key)
     start_date = get_latest_transaction_date()
 
     data_ingest.get_data_by_range(table='clickstream', start_date=start_date)
@@ -36,16 +36,19 @@ def update_bronze_layer():
     data_ingest.run_fetch()
     print('bronze layer updated successfully')
 
+
 def update_silver_layer():
     # setup and save data into silver layer
     silver_layer = SilverLayer()
     silver_layer.setup_transactions()
     silver_layer.save_transactions()
 
-def update_gold_layer(sales_report,filename):
+
+def update_gold_layer(sales_report, filename):
     # save report to gold layer
     save_to_gold_layer(sales_report, f"sales_report_{filename}")
     print('report saved to gold layer')
+
 
 def generate_report(item_to_be_queried: str):
     # get transformer
@@ -56,6 +59,7 @@ def generate_report(item_to_be_queried: str):
     print('report generated successfully')
     return sales_report
 
+
 def main():
     """
     Ingests data and saves to bronze layer
@@ -63,7 +67,6 @@ def main():
     Calculates month-over-month sales report for item
     :return: None
     """
-    
 
     # Ingest new data
     update_bronze_layer()
@@ -75,10 +78,6 @@ def main():
     sales_report = generate_report('tumbler')
     update_gold_layer(sales_report, 'tumbler')
 
-    
-
 
 if __name__ == "__main__":
     main()
-
-    
