@@ -6,6 +6,7 @@ class S3Layers(Enum):
     so that calls are constant
     """
     STAGE = "s3://allstar-training-mootech/stage"
+    BRONZE_TEST = "s3://allstar-training-mootech/bronze_test"
     BRONZE = "s3://allstar-training-mootech/raw_data"
     SILVER = "s3://allstar-training-mootech/silver_layer"
     GOLD = "s3://allstar-training-mootech/results"

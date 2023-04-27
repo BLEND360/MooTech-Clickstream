@@ -2,6 +2,8 @@ from data_ingestion import DataIngest
 from src.Transformations.month_over_month import MoMTransformer
 from src.Transformations.setup_sliver_layer import SilverLayer
 from src.utils.common_functions import get_latest_transaction_date, save_to_gold_layer
+from utils.load_tables import *
+from utils.data_quality import *
 import datetime
 
 
@@ -34,8 +36,9 @@ def update_bronze_layer():
     #                               end_date=yesterday,
     #                               )
     data_ingest.run_fetch()
+    qa_driver("clickstream")
     clickstream_bronze_df = get_clickstream(path=S3Layers.STAGE.value)
-    clickstream_bronze_df.write.mode("overwrite").partitionBy("utc_date").format("delta").save(S3Layers.BRONZE.value+"/clickstream")
+    clickstream_bronze_df.write.mode("overwrite").partitionBy("utc_date").format("delta").save(S3Layers.BRONZE_TEST.value+"/clickstream")
     print('bronze layer updated successfully')
 
 def update_silver_layer():
@@ -58,6 +61,13 @@ def generate_report(item_to_be_queried: str):
     print('report generated successfully')
     return sales_report
 
+def qa_driver(table_name: str):
+    if table_name == "clickstream":
+        table_stage = get_clickstream(path=S3Layers.STAGE.value)
+        table_bronze = get_clickstream(path=S3Layers.BRONZE.value)
+        schema_check(table_bronze, table_stage)
+        quality_assurance_clickstream(table_stage)
+
 def main():
     """
     Ingests data and saves to bronze layer
@@ -69,7 +79,7 @@ def main():
 
     # Ingest new data
     update_bronze_layer()
-
+    
     # update silver layer
     # update_silver_layer()
 

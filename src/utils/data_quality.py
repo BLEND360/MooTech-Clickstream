@@ -6,14 +6,7 @@ from datetime import datetime
 import requests
 import json
 
-def staging(df, df2):
-    count = df.rows()
-    count2 = df2.rows()
-
-    if count == count2:
-        print('QA Success')
-    else:
-        print('QA Failed')
+def schema_check(df, df2):
 
     columns = df.columns
     columns2 = df2.columns
@@ -79,18 +72,8 @@ def quality_assurance_transactions(df):
     null_counts = df.select([sum(isNull(c)).alias(c) for c in df.columns])
     null_counts.show()
 
-# Your original Spark DataFrame
-original_df = clickstream_data
-
-# Find the unique visitors for each date
-unique_visitors_df = original_df.groupBy("utc_date").agg(
-    countDistinct("visid_high", "visid_low").alias("unique_visitors")
-)
-
-# Define a UDF to fetch visitor data from the API
-@udf(returnType=IntegerType())
-def fetch_visitor_data(date):
-    url = "https://en44bq5e33.execute-api.us-east-1.amazonaws.com/dev/metrics/visitors"
+def fetch_validate_data(date, api_type: str):
+    url = "https://en44bq5e33.execute-api.us-east-1.amazonaws.com/dev/metrics/"+api_type
     payload = json.dumps({"date": datetime.strftime(date, '%m-%d-%Y')})
     headers = {"Content-Type": "application/json"}
 
@@ -99,53 +82,51 @@ def fetch_visitor_data(date):
         return int(response.text)
     return None
 
-# Fetch visitor data from the API for each date and create a new DataFrame
-api_visitors_temp = unique_visitors_df.select('utc_date')
-api_visitors_df = api_visitors_temp.withColumn(
-    "api_visitors", fetch_visitor_data(col("utc_date"))
-)
+def validate_table(original_df):
 
-# # Join both DataFrames based on the date
-combined_df = unique_visitors_df.join(api_visitors_df, on='utc_date')
+    # Find the unique visitors for each date
+    unique_visitors_df = original_df.groupBy("utc_date").agg(
+        countDistinct("visid_high", "visid_low").alias("unique_visitors")
+    )
 
-# # Calculate the difference between the two visitor counts and add it as a new column
-final_df = combined_df.withColumn(
-    'visitor_difference', col('api_visitors') - col('unique_visitors') 
-)
+    # Define a UDF to fetch visitor data from the API
+    
 
-# # # # Show the final DataFrame
-final_df.show()
+    # Fetch visitor data from the API for each date and create a new DataFrame
+    api_visitors_temp = unique_visitors_df.select('utc_date')
+    api_visitors_df = api_visitors_temp.withColumn(
+        "api_visitors", fetch_validate_data(col("utc_date"), "visitors")
+    )
 
-# Find the unique visitors for each date
-unique_hits_df = original_df.groupBy("utc_date").agg(
-    countDistinct("hitid_high", "hitid_low").alias("unique_hits")
-)
+    # # Join both DataFrames based on the date
+    combined_df = unique_visitors_df.join(api_visitors_df, on='utc_date')
 
-# Define a UDF to fetch visitor data from the API
-@udf(returnType=IntegerType())
-def fetch_hits_data(date):
-    url = "https://en44bq5e33.execute-api.us-east-1.amazonaws.com/dev/metrics/hits"
-    payload = json.dumps({"date": datetime.strftime(date, '%m-%d-%Y')})
-    headers = {"Content-Type": "application/json"}
+    # # Calculate the difference between the two visitor counts and add it as a new column
+    final_df = combined_df.withColumn(
+        'visitor_difference', col('api_visitors') - col('unique_visitors') 
+    )
 
-    response = requests.get(url, data=payload, headers=headers)
-    if response.status_code == 200:
-        return int(response.text)
-    return None
+    # # # # Show the final DataFrame
+    final_df.show()
 
-# Fetch visitor data from the API for each date and create a new DataFrame
-api_hits_temp = unique_hits_df.select('utc_date')
-api_hits_df = api_hits_temp.withColumn(
-    "api_hits", fetch_hits_data(col("utc_date"))
-)
+    # Find the unique visitors for each date
+    unique_hits_df = original_df.groupBy("utc_date").agg(
+        countDistinct("hitid_high", "hitid_low").alias("unique_hits")
+    )
 
-# # Join both DataFrames based on the date
-combined_hits_df = unique_hits_df.join(api_hits_df, on='utc_date')
+    # Fetch visitor data from the API for each date and create a new DataFrame
+    api_hits_temp = unique_hits_df.select('utc_date')
+    api_hits_df = api_hits_temp.withColumn(
+        "api_hits", fetch_validate_data(col("utc_date"), "hits")
+    )
 
-# # Calculate the difference between the two visitor counts and add it as a new column
-final_hits_df = combined_hits_df.withColumn(
-    'hit_difference', col('api_hits') - col('unique_hits') 
-)
+    # # Join both DataFrames based on the date
+    combined_hits_df = unique_hits_df.join(api_hits_df, on='utc_date')
 
-# # # # Show the final DataFrame
-final_hits_df.show()
+    # # Calculate the difference between the two visitor counts and add it as a new column
+    final_hits_df = combined_hits_df.withColumn(
+        'hit_difference', col('api_hits') - col('unique_hits') 
+    )
+
+    # # # # Show the final DataFrame
+    final_hits_df.show()
