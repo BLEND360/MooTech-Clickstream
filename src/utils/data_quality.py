@@ -1,12 +1,21 @@
 import pandas as pd
 import numpy as np
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DoubleType, TimestampType, StringType
-from pyspark.sql.functions import col, countDistinct, when, isnan, isnull, count,  udf, lit
+from pyspark.sql.functions import col, countDistinct, when, isnan, isnull, count, udf, lit
 from datetime import datetime
 import requests
 import json
 
+
 def schema_check(df, df2):
+    """
+        Checks if the new data fetched, has the same schema
+        as the data we have stored.
+
+        :param df: the dataframe we get from the data stored in bronze layer
+        :param df2: the dataframe created from newly fetched data
+        :return: None
+    """
 
     columns = df.columns
     columns2 = df2.columns
@@ -18,7 +27,20 @@ def schema_check(df, df2):
     else:
         print('Schema Changed')
 
+
 def quality_assurance_clickstream(df):
+    """
+        Performs basic QA tests on clickstream dataframe. This includes
+        - Missing value checks
+        - Duplicate records checks
+        - Data type checks
+        - Unique value checks
+        - Date inconsistencies checks
+
+        :param df: clickstream dataframe we want to perform QA checks on
+        :return: None
+    """
+
     # Check for missing values
     print("Missing Values:")
     missing_values = df.select([count(when(col(column).isNull(), column)).alias(column) for column in df.columns])
@@ -53,11 +75,22 @@ def quality_assurance_clickstream(df):
 
 
 def quality_assurance_transactions(df):
-    #implement missing value checks
+    """
+        Performs basic QA tests on transactions dataframe. This includes
+        - Missing value checks
+        - Duplicate records checks
+        - Invalid data checks
+        - null value counts
+
+        :param df: transactions dataframe we want to perform QA checks on
+        :return: None
+    """
+
+    # implement missing value checks
     missing_values = df.select([count(when(isnan(c) | isNull(c), c)).alias(c) for c in df.columns])
     missing_values.show()
 
-    #implement dupe checks
+    # implement dupe checks
     duplicates = df.groupBy("order_id").agg(count("*").alias("count")).filter(col("count") > 1)
     duplicates.show()
 
@@ -65,15 +98,24 @@ def quality_assurance_transactions(df):
     invalid_data = df.filter(col("price") < 0)
     invalid_data.show()
 
-    #check if the API returns same data everytime
+    # check if the API returns same data everytime
     # pull twice and compare
 
-    #null value counts
+    # null value counts
     null_counts = df.select([sum(isNull(c)).alias(c) for c in df.columns])
     null_counts.show()
 
+
 def fetch_validate_data(date, api_type: str):
-    url = "https://en44bq5e33.execute-api.us-east-1.amazonaws.com/dev/metrics/"+api_type
+    """
+        Fetches validation data for a particular date from given API type
+
+        :param date: the date we want the validation data for
+        :param api_type: the type of validation data url we want to hit. (hits / visitors)
+        :return: validation data - hit or visitor count for given date
+    """
+    
+    url = "https://en44bq5e33.execute-api.us-east-1.amazonaws.com/dev/metrics/" + api_type
     payload = json.dumps({"date": datetime.strftime(date, '%m-%d-%Y')})
     headers = {"Content-Type": "application/json"}
 
@@ -82,7 +124,15 @@ def fetch_validate_data(date, api_type: str):
         return int(response.text)
     return None
 
+
 def validate_table(original_df):
+    """
+        Performs validation checks on given dataframe by comparing validation data
+        and data in given dataframe
+
+        :param original_df: dataframe we want to perform validation checks on
+        :return: None
+    """
 
     # Find the unique visitors for each date
     unique_visitors_df = original_df.groupBy("utc_date").agg(
@@ -90,7 +140,6 @@ def validate_table(original_df):
     )
 
     # Define a UDF to fetch visitor data from the API
-    
 
     # Fetch visitor data from the API for each date and create a new DataFrame
     api_visitors_temp = unique_visitors_df.select('utc_date')
@@ -103,7 +152,7 @@ def validate_table(original_df):
 
     # # Calculate the difference between the two visitor counts and add it as a new column
     final_df = combined_df.withColumn(
-        'visitor_difference', col('api_visitors') - col('unique_visitors') 
+        'visitor_difference', col('api_visitors') - col('unique_visitors')
     )
 
     # # # # Show the final DataFrame
@@ -125,7 +174,7 @@ def validate_table(original_df):
 
     # # Calculate the difference between the two visitor counts and add it as a new column
     final_hits_df = combined_hits_df.withColumn(
-        'hit_difference', col('api_hits') - col('unique_hits') 
+        'hit_difference', col('api_hits') - col('unique_hits')
     )
 
     # # # # Show the final DataFrame
