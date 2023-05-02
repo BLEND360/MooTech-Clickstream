@@ -21,20 +21,20 @@ def update_bronze_layer():
 
     data_ingest.get_data_by_range(table='clickstream', start_date=start_date) # COME UP WITH AN SLA PERIOD
 
-    # data_ingest.get_data_by_range(table='transactions', start_date=start_date)
+    data_ingest.get_data_by_range(table='transactions', start_date=start_date)
     # update SCD tables
-    # day_before_yesterday = datetime.datetime.utcnow() - datetime.timedelta(days=2)
-    # yesterday = datetime.datetime.utcnow() - datetime.timedelta(days=1)
+    day_before_yesterday = datetime.datetime.utcnow() - datetime.timedelta(days=2)
+    yesterday = datetime.datetime.utcnow() - datetime.timedelta(days=1)
 
-    # data_ingest.get_data_by_range(table='users',
-    #                               start_date=day_before_yesterday,
-    #                               end_date=yesterday,
-    #                               )
+    data_ingest.get_data_by_range(table='users',
+                                  start_date=day_before_yesterday,
+                                  end_date=yesterday,
+                                  )
 
-    # data_ingest.get_data_by_range(table='products',
-    #                               start_date=day_before_yesterday,
-    #                               end_date=yesterday,
-    #                               )
+    data_ingest.get_data_by_range(table='products',
+                                  start_date=day_before_yesterday,
+                                  end_date=yesterday,
+                                  )
     data_ingest.run_fetch()
     qa_driver("clickstream")
     clickstream_bronze_df = get_clickstream(path=S3Layers.STAGE.value)
@@ -81,11 +81,11 @@ def main():
     update_bronze_layer()
     
     # update silver layer
-    # update_silver_layer()
+    update_silver_layer()
 
     # generate and save report to gold layer
-    # sales_report = generate_report('tumbler')
-    # update_gold_layer(sales_report, 'tumbler')
+    sales_report = generate_report('tumbler')
+    update_gold_layer(sales_report, 'tumbler')
 
     
 
