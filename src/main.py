@@ -39,7 +39,7 @@ def update_bronze_layer():
     qa_driver("clickstream")
     clickstream_bronze_df = get_clickstream(path=S3Layers.STAGE.value)
     clickstream_bronze_df.write.mode("overwrite").partitionBy("utc_date").format("delta").save(
-        S3Layers.BRONZE_TEST.value + "/clickstream")
+        S3Layers.BRONZE.value + "/clickstream")
     print('bronze layer updated successfully')
 
 
@@ -67,11 +67,22 @@ def generate_report(item_to_be_queried: str):
 
 
 def qa_driver(table_name: str):
+    """
+    runs quality assurance functions based on table name.
+    To be implemented for 
+        - transactions
+        - products
+        - users
+
+    :param table_name: the table you want to run QA for
+    :return: None
+    """
     if table_name == "clickstream":
         table_stage = get_clickstream(path=S3Layers.STAGE.value)
         table_bronze = get_clickstream(path=S3Layers.BRONZE.value)
         schema_check(table_bronze, table_stage)
         quality_assurance_clickstream(table_stage)
+        validate_table(table_stage)
 
 
 def main():
@@ -79,6 +90,7 @@ def main():
     Ingests data and saves to bronze layer
     Sets up Silver layer with transactions table
     Calculates month-over-month sales report for item
+    
     :return: None
     """
 
