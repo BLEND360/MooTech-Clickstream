@@ -114,7 +114,7 @@ def fetch_validate_data(date, api_type: str):
         :param api_type: the type of validation data url we want to hit. (hits / visitors)
         :return: validation data - hit or visitor count for given date
     """
-    
+
     url = "https://en44bq5e33.execute-api.us-east-1.amazonaws.com/dev/metrics/" + api_type
     payload = json.dumps({"date": datetime.strftime(date, '%m-%d-%Y')})
     headers = {"Content-Type": "application/json"}
