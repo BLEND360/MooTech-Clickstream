@@ -36,6 +36,21 @@ def get_transactions(path: str = S3Layers.BRONZE.value, data_format: str = "parq
 
     return transactions_df
 
+def get_clickstream(path: str = S3Layers.BRONZE.value, data_format: str = "parquet"):
+    """
+    Returns the raw products table stored in bronze layer
+    :param data_format:  which format the stored data uses. defaults to delta
+    :param path: the path to bronze layer
+    :return: products data frame
+    """
+
+    products_df = (spark
+                   .read
+                   .format(data_format)
+                   .load(f"{path}/clickstream/**")
+                   )
+    return products_df
+
 
 def get_products(path: str = S3Layers.BRONZE.value, data_format: str = "delta"):
     """

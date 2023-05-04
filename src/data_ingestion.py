@@ -57,7 +57,7 @@ class DataIngest:
             "end_date": end_date,
             "api_key": self.api_key,
             "destination_s3_bucket": "allstar-training-mootech",
-            "destination_s3_directory": f"raw_data/{table}/{start_date}-{end_date}",
+            "destination_s3_directory": f"stage/{table}",#/{start_date}-{end_date}",
             "table": table
         }
 
